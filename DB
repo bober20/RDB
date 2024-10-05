@@ -1,0 +1,26 @@
+CREATE TABLE users (
+	user_id SERIAL PRIMARY KEY,
+	first_name varchar(15) NOT NULL,
+	last_name varchar(15) NOT NULL,
+	email varchar(60) NOT NULL,
+	password varchar(60) NOT NULL,
+    is_staff boolean NOT NULL DEFAULT false,
+    is_admin boolean NOT NULL DEFAULT false
+);
+
+CREATE TABLE clients (
+    client_id SERIAL PRIMARY KEY,
+    user_id integer NOT NULL,
+    company_name varchar(20),
+
+    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE employees (
+    employee_id SERIAL PRIMARY KEY,
+    user_id integer NOT NULL,
+    position_id integer NOT NULL,
+    date_of_employment date,
+
+    FOREIGN KEY (user_id) REFERENCES users (user_id)
+);
