@@ -2,7 +2,7 @@ CREATE TABLE users (
 	user_id SERIAL PRIMARY KEY,
 	first_name varchar(15) NOT NULL,
 	last_name varchar(15) NOT NULL,
-	email varchar(60) NOT NULL,
+	email varchar(60) NOT NULL UNIQUE,
 	password varchar(60) NOT NULL,
     is_staff boolean NOT NULL DEFAULT false,
     is_admin boolean NOT NULL DEFAULT false
@@ -10,17 +10,315 @@ CREATE TABLE users (
 
 CREATE TABLE clients (
     client_id SERIAL PRIMARY KEY,
-    user_id integer NOT NULL,
-    company_name varchar(20),
+    user_id integer UNIQUE NOT NULL REFERENCES users ON DELETE CASCADE,
+    company_name varchar(20)
+);
 
-    FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+CREATE TABLE employee_positions (
+    position_id SERIAL PRIMARY KEY,
+    position_name varchar(30) UNIQUE NOT NULL,
+    salary integer NOT NULL CHECK (salary > 0)
 );
 
 CREATE TABLE employees (
     employee_id SERIAL PRIMARY KEY,
-    user_id integer NOT NULL,
+    user_id integer UNIQUE NOT NULL REFERENCES users ON DELETE CASCADE,
     position_id integer NOT NULL,
-    date_of_employment date,
+    date_of_employment date CHECK (date_of_employment <= CURRENT_DATE),
 
-    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    FOREIGN KEY (position_id) REFERENCES employee_positions (position_id)
 );
+
+
+CREATE TABLE vacancies (
+    vacancy_id SERIAL PRIMARY KEY,
+    position_id integer UNIQUE NOT NULL REFERENCES employee_positions ON DELETE CASCADE,
+    vacancy_number integer NOT NULL DEFAULT 1 CHECK (vacancy_number > 0),
+    vacancy_description text
+);
+
+CREATE TABLE answers (
+    answer_id SERIAL PRIMARY KEY,
+    employee_id integer REFERENCES employees ON DELETE SET NULL,
+    content text NOT NULL,
+    creation_date date DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE questions (
+    question_id SERIAL PRIMARY KEY,
+    answer_id integer UNIQUE REFERENCES answers ON DELETE SET NULL,
+    content text NOT NULL,
+    creation_date date DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE bonuses (
+    bonus_id SERIAL PRIMARY KEY,
+    code integer UNIQUE NOT NULL,
+    discount_percentage integer NOT NULL CHECK (discount_percentage > 0)
+);
+
+CREATE TABLE services (
+    service_id SERIAL PRIMARY KEY,
+    price integer NOT NULL CHECK (price > 0),
+    area integer CHECK (area > 0),
+    extra_info text
+);
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    client_id integer REFERENCES clients ON DELETE SET NULL,
+    employee_id integer REFERENCES employees ON DELETE SET NULL,
+    bonus_id integer REFERENCES bonuses ON DELETE SET NULL,
+    client_address varchar(30) NOT NULL,
+    order_date date NOT NULL DEFAULT CURRENT_DATE,
+
+    CONSTRAINT unique_worker_date UNIQUE (employee_id, order_date)
+);
+
+CREATE TABLE services_orders (
+    services_orders_id SERIAL PRIMARY KEY,
+    service_id integer NOT NULL REFERENCES services ON DELETE CASCADE,
+    order_id integer NOT NULL REFERENCES orders ON DELETE CASCADE
+);
+
+CREATE TABLE review (
+    review_id SERIAL PRIMARY KEY,
+    client_id integer NOT NULL REFERENCES clients ON DELETE CASCADE,
+    rate SMALLINT NOT NULL CHECK (rate >= 0) CHECK(rate <= 5),
+    review_content text,
+    review_date date NOT NULL DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE actions (
+    action_id SERIAL PRIMARY KEY,
+    action_name text NOT NULL
+);
+
+CREATE TABLE logs (
+    log_id SERIAL PRIMARY KEY,
+    action_id integer REFERENCES actions ON DELETE CASCADE,
+    user_id integer REFERENCES users ON DELETE CASCADE,
+    log_date date NOT NULL DEFAULT CURRENT_DATE
+);
+
+
+
+
+CREATE INDEX service_price_area ON services(price, area);
+CREATE INDEX employees_user_id_position_id ON employees(user_id, position_id);
+CREATE INDEX vacancies_employee_position_id ON vacancies(position_id);
+
+
+
+
+
+
+INSERT INTO users (first_name, last_name, email, password, is_staff, is_admin) 
+VALUES 
+('John', 'Doe', 'john.doe@example.com', 'password123', true, false),
+('Jane', 'Smith', 'jane.smith@example.com', 'password456', false, false),
+('Alice', 'Johnson', 'alice.johnson@example.com', 'password789', true, true),
+('Tom', 'Doe', 'tom.doe@example.com', 'password123', true, false),
+('Paul', 'Lonard', 'paul.lonard@example.com', 'password456', false, false),
+('Stephan', 'Katm', 'stephan.katm@example.com', 'password789', false, false);
+
+INSERT INTO users (first_name, last_name, email, password, is_staff, is_admin) 
+VALUES
+('Mark', 'Pattinson', 'mark.pattinson@example.com', 'password123', true, false),
+('Alice', 'Blackwood', 'alice.blackwood@example.com', 'password456', false, false),
+('Mikal', 'Brown', 'mikal.brown@example.com', 'password789', true, false);
+
+INSERT INTO clients (user_id, company_name)
+VALUES
+(14, 'Smith Co');
+
+INSERT INTO employees (user_id, position_id, date_of_employment)
+VALUES 
+(13, 1, '2023-05-01'),
+(15, 2, '2022-11-15');
+
+INSERT INTO clients (user_id, company_name)
+VALUES 
+(2, 'Smith Co'),
+(5, 'Johnson LLC'),
+(6, NULL);
+
+INSERT INTO employee_positions (position_name, salary)
+VALUES 
+('Cleaner', 50000),
+('Supervisor', 70000),
+('Manager', 90000);
+
+INSERT INTO employees (user_id, position_id, date_of_employment)
+VALUES 
+(1, 1, '2023-05-01'),
+(3, 2, '2022-11-15'),
+(4, 3, '2021-01-10');
+
+INSERT INTO vacancies (position_id, vacancy_number, vacancy_description)
+VALUES 
+(1, 5, 'Looking for experienced cleaners'),
+(2, 2, 'Need a supervisor for a large project'),
+(3, 1, 'Manager required for office coordination');
+
+INSERT INTO questions (content, creation_date)
+VALUES 
+('What cleaning products do you use?', '2024-01-15'),
+('How long does a standard cleaning take?', '2024-02-20'),
+('Do you offer eco-friendly cleaning services?', CURRENT_DATE);
+
+INSERT INTO answers (employee_id, content, creation_date)
+VALUES 
+(1, 'We use certified eco-friendly cleaning products.', CURRENT_DATE),
+(2, 'Standard cleaning takes about 2-3 hours.', '2024-02-21'),
+(3, 'Yes, we offer eco-friendly cleaning upon request.', '2024-01-16');
+
+INSERT INTO bonuses (code, discount_percentage)
+VALUES 
+(12345, 10),
+(67890, 15),
+(54321, 20);
+
+INSERT INTO services (price, area, extra_info)
+VALUES 
+(150, 80, 'Standard apartment cleaning'),
+(300, 150, 'Office cleaning with additional disinfection'),
+(100, 60, 'Quick one-room cleaning');
+
+INSERT INTO orders (client_id, employee_id, bonus_id, client_address, order_date)
+VALUES 
+(1, 1, 1, '123 Main St', CURRENT_DATE),
+(2, 2, 2, '456 Elm St', '2024-03-01'),
+(3, 3, 3, '789 Oak St', '2024-02-25');
+
+INSERT INTO services_orders (service_id, order_id)
+VALUES 
+(1, 1),
+(2, 2),
+(3, 3);
+
+INSERT INTO review (client_id, rate, review_content, review_date)
+VALUES 
+(1, 5, 'Excellent service, will hire again!', CURRENT_DATE),
+(2, 4, 'Good job, but could be faster.', '2024-03-02'),
+(3, 3, 'Satisfactory, but some spots were missed.', '2024-02-26');
+
+INSERT INTO actions (action_name)
+VALUES 
+('Login'),
+('Order placed'),
+('Review submitted');
+
+
+
+
+
+
+select table_name
+from information_schema.tables
+where table_schema='public';
+
+
+
+CREATE TABLE try_table AS
+SELECT position_id, position_name
+from employee_positions
+where position_id not in (1, 6);
+
+select * from try_table
+where position_id >= any(ARRAY[3, 5, 6, 7]);
+
+select * from clients
+where company_name is not null;
+
+select * from orders;
+
+select user_id as "ID", first_name as "Фамилия" 
+from users;
+
+select sum(salary) as "Заработная плата всех сотрудников"
+from employee_positions;
+
+select * from employee_positions
+limit 1;
+
+select * from clients
+where company_name is not null;
+
+select position_name, salary 
+from employee_positions
+where salary > 50000;
+
+select * from answers;
+select * from answers
+where content like '%eco-friendly%';
+
+select position_name, salary
+from employee_positions
+where salary BETWEEN 40000 and 80000;
+
+select position_name
+from employee_positions
+where position_name in ('Cleaner', 'Manager');
+
+select max(salary) as "Самая большая зарплата", min(salary) as "Самая маленькая зарплата"
+from employee_positions;
+
+create table smth();
+ALTER TABLE smth add column a integer;
+
+alter table smth rename to something;
+
+select * from something;
+alter table something rename a to b;
+
+insert into something(b) values (1), (2);
+
+select * from something;
+
+DELETE FROM something
+where b = 1;
+
+delete from try_table
+where position_id = 2;
+
+alter table try_table
+drop position_name;
+
+drop table something;
+
+UPDATE employee_positions
+SET salary = 10;
+
+UPDATE employee_positions
+SET salary = 5
+WHERE position_name = 'Cleaner';
+
+select * from employee_positions;
+
+select * from employees;
+
+select distinct position_id
+from employees;
+
+select position_id, count(position_id)
+from employees
+group by position_id;
+
+select * from employee_positions
+group by position_id
+having (salary > 5);
+
+SELECT employee_id, position_name
+FROM employees INNER JOIN employee_positions
+ON employees.position_id = employee_positions.position_id;
+
+SELECT first_name, last_name, date_of_employment, position_name
+FROM 
+(
+    SELECT first_name, last_name, position_id, date_of_employment
+    from users INNER JOIN employees
+    on users.user_id = employees.user_id
+) as "employees"
+INNER JOIN employee_positions
+ON employees.position_id = employee_positions.position_id;
