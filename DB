@@ -301,6 +301,10 @@ select * from employees;
 select distinct position_id
 from employees;
 
+
+-- 4 lab
+
+
 select position_id, count(position_id)
 from employees
 group by position_id;
@@ -309,9 +313,14 @@ select * from employee_positions
 group by position_id
 having (salary > 5);
 
+
+
 SELECT employee_id, position_name
 FROM employees INNER JOIN employee_positions
-ON employees.position_id = employee_positions.position_id;
+ON employees.position_id = employee_positions.position_id
+where position_name = ANY(Array['Supervisor', 'Manager']);
+
+
 
 SELECT first_name, last_name, date_of_employment, position_name
 FROM 
@@ -322,3 +331,241 @@ FROM
 ) as "employees"
 INNER JOIN employee_positions
 ON employees.position_id = employee_positions.position_id;
+
+
+
+select area, price, company_name
+from (
+    select area, price, order_id 
+    from services_orders inner join services
+    on services_orders.service_id = services.service_id
+) as temp1
+INNER JOIN (
+    select company_name, services_orders.order_id
+    from services_orders INNER JOIN (
+        select company_name, order_id
+        from orders inner join clients
+        on orders.client_id = clients.client_id
+    ) as temporary_table
+    ON services_orders.order_id = temporary_table.order_id
+) as temp2
+on temp1.order_id = temp2.order_id
+where price <= (select avg(price) from services);
+
+
+
+select sum(area), round(avg(price), 2), company_name
+from (
+    select area, price, order_id 
+    from services_orders inner join services
+    on services_orders.service_id = services.service_id
+) as temp1
+INNER JOIN (
+    select company_name, services_orders.order_id
+    from services_orders INNER JOIN (
+        select company_name, order_id
+        from orders inner join clients
+        on orders.client_id = clients.client_id
+    ) as temporary_table
+    ON services_orders.order_id = temporary_table.order_id
+) as temp2
+on temp1.order_id = temp2.order_id
+group by company_name
+having avg(price) > 100;
+
+
+
+select position_name, salary 
+from (select position_id 
+    from vacancies
+    union 
+    select position_id
+    from employees
+) as temp_table
+inner join employee_positions 
+on employee_positions.position_id = temp_table.position_id;
+
+
+-- difference between left and right join.
+
+select company_name, client_address
+from clients right join orders
+on orders.client_id = clients.client_id;
+
+select company_name, client_address
+from clients left join orders
+on orders.client_id = clients.client_id;
+
+
+
+insert into bonuses (code, discount_percentage)
+(
+    select service_id, order_id
+    from services_orders
+    where service_id < 3
+);
+
+
+
+select employee_id, count(employee_id)
+from orders
+where client_address <> '789 Oak St'
+group by employee_id
+having count(employee_id) < 3;
+
+
+
+select company_name from clients
+where exists (select 1 from orders where orders.client_id=clients.client_id);
+
+
+
+select employee_id,
+case when employee_id=1 then 'one'
+    when employee_id=2 then 'two'
+    else 'other'
+    end
+from employees;
+
+
+
+--partitions 
+create table measurement (
+    city_id         int not null,
+    logdate         date not null,
+    peaktemp        int,
+    unitsales       int
+) partition by range (logdate);
+
+create table measurement_y2006m02 partition of measurement
+    for values from ('2006-02-01') to ('2006-03-01');
+
+create table measurement_y2006m03 partition of measurement
+    for values from ('2006-03-01') to ('2006-04-01');
+
+
+
+
+select 
+    e.employee_id,
+    p.position_name,
+    COUNT(o.order_id) as employee_orders_count,
+    SUM(COUNT(o.order_id)) over (partition by p.position_name) as total_orders_by_position
+from employees e
+join employee_positions p on e.position_id = p.position_id
+left join orders o on e.employee_id = o.employee_id
+group by e.employee_id, p.position_name
+order by p.position_name, employee_orders_count desc;
+
+
+
+
+select emp_names.employee_id, first_name, last_name, counted_services
+from (
+    select first_name, last_name, employee_id
+    from users inner join employees
+    on users.user_id = employees.user_id
+) as "emp_names"
+inner join (select employee_id, count(service_id) as "counted_services"
+from (
+    select employee_id, service_id, orders.order_id
+    from orders INNER join services_orders
+    on orders.order_id = services_orders.order_id
+) as "tempt"
+where (tempt.employee_id = ANY(select employee_id 
+from answers))
+group by employee_id) as "without_names"
+on emp_names.employee_id = without_names.employee_id;
+
+
+
+
+
+--lab5
+-- for orders
+
+CREATE OR REPLACE FUNCTION log_new_order()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO logs (action_id, user_id, log_date)
+    VALUES (
+        (SELECT action_id FROM actions WHERE action_name = 'Order placed'),
+        (SELECT user_id FROM clients WHERE client_id = NEW.client_id),
+        CURRENT_DATE
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_log_new_order
+AFTER INSERT ON orders
+FOR EACH ROW
+EXECUTE FUNCTION log_new_order();
+
+
+--for clients
+
+CREATE OR REPLACE FUNCTION log_new_order()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO logs (action_id, user_id, log_date)
+    VALUES (
+        (SELECT action_id FROM actions WHERE action_name = 'Order placed'),
+        (SELECT user_id FROM clients WHERE client_id = NEW.client_id),
+        CURRENT_DATE
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_log_new_order
+AFTER INSERT ON orders
+FOR EACH ROW
+EXECUTE FUNCTION log_new_order();
+
+INSERT INTO actions (action_name)
+VALUES 
+('New employee registered'),
+('New client registered'),
+('Review submitted');
+
+CREATE OR REPLACE FUNCTION log_new_client()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO logs (action_id, user_id, log_date)
+    VALUES (
+        (SELECT action_id FROM actions WHERE action_name = 'New client registered'),
+        NEW.user_id,
+        CURRENT_DATE
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trigger_log_new_client
+AFTER INSERT ON clients
+FOR EACH ROW
+EXECUTE FUNCTION log_new_client();
+
+
+
+--for employees
+CREATE OR REPLACE FUNCTION log_new_employee()
+RETURNS TRIGGER AS $$
+BEGIN 
+    INSERT INTO logs(action_id, user_id, log_date)
+    values (
+        (SELECT action_id FROM actions WHERE action_name = 'New employee registered'),
+        (NEW.user_id),
+        CURRENT_DATE
+    );
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trigger_log_new_employee
+AFTER INSERT ON employees
+FOR EACH ROW
+EXECUTE FUNCTION log_new_employee();
