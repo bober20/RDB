@@ -505,30 +505,6 @@ EXECUTE FUNCTION log_new_order();
 
 --for clients
 
-CREATE OR REPLACE FUNCTION log_new_order()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO logs (action_id, user_id, log_date)
-    VALUES (
-        (SELECT action_id FROM actions WHERE action_name = 'Order placed'),
-        (SELECT user_id FROM clients WHERE client_id = NEW.client_id),
-        CURRENT_DATE
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_log_new_order
-AFTER INSERT ON orders
-FOR EACH ROW
-EXECUTE FUNCTION log_new_order();
-
-INSERT INTO actions (action_name)
-VALUES 
-('New employee registered'),
-('New client registered'),
-('Review submitted');
-
 CREATE OR REPLACE FUNCTION log_new_client()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -569,3 +545,328 @@ CREATE TRIGGER trigger_log_new_employee
 AFTER INSERT ON employees
 FOR EACH ROW
 EXECUTE FUNCTION log_new_employee();
+
+
+
+--for employees positions
+CREATE OR REPLACE FUNCTION log_new_employee_position()
+RETURNS TRIGGER AS $$
+BEGIN 
+    INSERT INTO logs(action_id, user_id, log_date)
+    values (
+        (5),
+        (NEW.user_id),
+        CURRENT_DATE
+    );
+   RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER log_new_employee_position
+AFTER UPDATE OF position_id ON employees 
+FOR EACH ROW
+WHEN (OLD.position_id IS DISTINCT FROM NEW.position_id)
+EXECUTE FUNCTION log_new_employee();
+
+
+
+--create client
+CREATE OR REPLACE PROCEDURE create_client(
+    p_first_name VARCHAR(15),
+    p_last_name VARCHAR(15),
+    p_email VARCHAR(60),
+    p_password VARCHAR(60),
+    p_company_name VARCHAR(20)
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    new_user_id INTEGER;
+BEGIN
+    INSERT INTO users (first_name, last_name, email, password, is_staff, is_admin)
+    VALUES (p_first_name, p_last_name, p_email, p_password, FALSE, FALSE)
+    RETURNING user_id INTO new_user_id;
+
+    INSERT INTO clients (user_id, company_name)
+    VALUES (new_user_id, p_company_name);
+END;
+$$;
+
+
+
+--create employee
+CREATE OR REPLACE PROCEDURE create_employee(
+    p_first_name VARCHAR(15),
+    p_last_name VARCHAR(15),
+    p_email VARCHAR(60),
+    p_password VARCHAR(60),
+    p_position_id INTEGER,
+    p_date_of_employment DATE
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    new_user_id INTEGER;
+BEGIN
+    INSERT INTO users (first_name, last_name, email, password, is_staff, is_admin)
+    VALUES (p_first_name, p_last_name, p_email, p_password, TRUE, FALSE)
+    RETURNING user_id INTO new_user_id;
+
+    INSERT INTO employees (user_id, position_id, date_of_employment)
+    VALUES (new_user_id, p_position_id, p_date_of_employment);
+END;
+$$;
+
+
+
+--delete employees and clients
+CREATE OR REPLACE PROCEDURE delete_user(
+    required_user_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN DELETE FROM users
+WHERE user_id = required_user_id;
+END;
+$$;
+
+
+--for order creation
+CREATE OR REPLACE PROCEDURE create_order_with_service(
+    p_client_id INTEGER,
+    p_employee_id INTEGER,
+    p_bonus_id INTEGER,
+    p_client_address VARCHAR(30),
+    p_order_date DATE,
+    p_service_id INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    new_order_id INTEGER;
+BEGIN
+    INSERT INTO orders (client_id, employee_id, bonus_id, client_address, order_date)
+    VALUES (p_client_id, p_employee_id, p_bonus_id, p_client_address, p_order_date)
+    RETURNING order_id INTO new_order_id;
+
+    INSERT INTO services_orders (service_id, order_id)
+    VALUES (p_service_id, new_order_id);
+END;
+$$;
+
+
+
+--other procedures
+CREATE OR REPLACE PROCEDURE add_review(
+    p_client_id INTEGER,
+    p_rate SMALLINT,
+    p_review_content TEXT,
+    p_review_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO review (client_id, rate, review_content, review_date)
+    VALUES (p_client_id, p_rate, p_review_content, p_review_date);
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE add_bonus(
+    p_code INTEGER,
+    p_discount_percentage INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO bonuses (code, discount_percentage)
+    VALUES (p_code, p_discount_percentage);
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE add_service(
+    p_price INTEGER,
+    p_area INTEGER,
+    p_extra_info TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO services (price, area, extra_info)
+    VALUES (p_price, p_area, p_extra_info);
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE add_vacancy(
+    p_position_id INTEGER,
+    p_vacancy_number INTEGER,
+    p_vacancy_description TEXT
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO vacancies (position_id, vacancy_number, vacancy_description)
+    VALUES (p_position_id, p_vacancy_number, p_vacancy_description);
+END;
+$$;
+
+
+
+CREATE OR REPLACE PROCEDURE add_question(
+    p_content TEXT,
+    p_creation_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO questions (content, creation_date)
+    VALUES (p_content, p_creation_date);
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE add_answer(
+    p_employee_id INTEGER,
+    p_content TEXT,
+    p_creation_date DATE
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO answers (employee_id, content, creation_date)
+    VALUES (p_employee_id, p_content, p_creation_date);
+END;
+$$;
+
+
+CREATE OR REPLACE PROCEDURE add_position(
+    p_position_name VARCHAR(30),
+    p_salary INTEGER
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    INSERT INTO employee_positions (position_name, salary)
+    VALUES (p_position_name, p_salary);
+END;
+$$;
+
+
+
+CREATE OR REPLACE FUNCTION get_order_sum(
+    required_order_id INTEGER
+) 
+RETURNS NUMERIC AS $$
+DECLARE
+    total_sum NUMERIC;
+BEGIN
+    SELECT SUM(price)
+    INTO total_sum
+    FROM services
+    WHERE services.service_id = ANY (
+        SELECT service_id 
+        FROM services_orders
+        WHERE services_orders.order_id = required_order_id
+    );
+
+    RETURN total_sum;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT get_order_sum(1);
+
+
+
+
+
+CREATE OR REPLACE FUNCTION decrease_vacancy_on_hire()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE vacancies
+    SET vacancy_number = vacancy_number - 1
+    WHERE position_id = NEW.position_id AND vacancy_number > 0;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER reduce_vacancy_trigger
+AFTER INSERT ON employees
+FOR EACH ROW
+EXECUTE FUNCTION decrease_vacancy_on_hire();
+
+
+
+
+
+CREATE OR REPLACE FUNCTION add_answer_without_info()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_answer_id INTEGER;
+BEGIN
+    INSERT INTO answers (employee_id, content, creation_date)
+    VALUES  
+        (1, 'We will call to get you more info', CURRENT_DATE)
+    RETURNING answer_id INTO new_answer_id;
+
+    UPDATE questions
+    SET answer_id = new_answer_id
+    WHERE question_id = NEW.question_id AND answer_id IS NULL;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER add_answer_without_info_trigger
+AFTER INSERT ON questions
+FOR EACH ROW
+EXECUTE FUNCTION add_answer_without_info();
+
+
+CREATE OR REPLACE FUNCTION update_vacancy_on_hire()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO vacancies (position_id, vacancy_number, vacancy_description)
+    VALUES 
+    (NEW.position_id, 1, 'Looking for experienced employees');
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- DROP TRIGGER reduce_vacancy_trigger on employees;
+
+CREATE TRIGGER employees_vacancy_trigger
+AFTER INSERT ON employee_positions
+FOR EACH ROW
+EXECUTE FUNCTION decrease_vacancy_on_hire();
+
+
+-- create or replace function name()
+-- returns numeric as $$
+-- declare varia numeric;
+-- BEGIN
+
+-- end;
+-- $$ LANGUAGE 
+
+
+-- CREATE TRIGGER trigger_log_new_employee
+-- AFTER/BEFORE/INSTEAD OF INSERT ON employees
+-- FOR EACH ROW
+-- EXECUTE FUNCTION log_new_employee();
+
+
+-- CREATE OR REPLACE PROCEDURE add_answer(
+--     p_employee_id INTEGER
+-- )
+-- LANGUAGE plpgsql
+-- AS $$
+-- BEGIN
+--     
+-- END;
+-- $$;
+
