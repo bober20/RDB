@@ -1,0 +1,54 @@
+@model Entities.Review
+
+@{
+    var reviews = (List<Entities.Review>)ViewData["reviews"];
+}
+
+@{
+    var isStaffClaim = User.FindFirst("is_staff")?.Value;
+    bool isStaff = !string.IsNullOrEmpty(isStaffClaim) && bool.Parse(isStaffClaim);
+    var isAdminClaim = User.FindFirst("is_admin")?.Value;
+    bool isAdmin = !string.IsNullOrEmpty(isAdminClaim) && bool.Parse(isAdminClaim);
+}
+@if (User.Identity.IsAuthenticated && !isStaff)
+{
+    <form method="post" asp-action="CreateReview">
+        <div class="form-group">
+            <label asp-for="Rate" class="control-label">Rate</label>
+            <input asp-for="Rate" class="form-control" />
+            <span asp-validation-for="Rate" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ReviewContent" class="control-label">Review Content</label>
+            <textarea asp-for="ReviewContent" class="form-control"></textarea>
+            <span asp-validation-for="ReviewContent" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <input type="submit" value="Submit" class="btn btn-primary" />
+        </div>
+    </form>
+}
+
+    <table class="table">
+        <thead>
+        <tr>
+            <th>Review ID</th>
+            <th>Client ID</th>
+            <th>Rate</th>
+            <th>Review Content</th>
+            <th>Review Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var review in reviews)
+        {
+            <tr>
+                <td>@review.Id</td>
+                <td>@review.ClientId</td>
+                <td>@review.Rate</td>
+                <td>@review.ReviewContent</td>
+                <td>@review.ReviewDate.ToString("yyyy-MM-dd")</td>
+            </tr>
+        }
+        </tbody>
+    </table>

@@ -1,0 +1,62 @@
+@model Entities.Service
+
+@{
+    var services = (List<Entities.Service>)ViewData["services"];
+    var orderSum = ViewData["OrderSum"];
+}
+
+@{
+    var isStaffClaim = User.FindFirst("is_staff")?.Value;
+    bool isStaff = !string.IsNullOrEmpty(isStaffClaim) && bool.Parse(isStaffClaim);
+    var isAdminClaim = User.FindFirst("is_admin")?.Value;
+    bool isAdmin = !string.IsNullOrEmpty(isAdminClaim) && bool.Parse(isAdminClaim);
+}
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Area</th>
+        <th>Price</th>
+        <th>Extra info</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var service in services)
+    {
+        <tr>
+            <td>@service.Name</td>
+            <td>@service.Area</td>
+            <td>@service.Price</td>
+            <td>@service.ExtraInfo</td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+
+@if (isAdmin)
+{
+    <h2>Add Service</h2>
+    <form method="post" asp-action="CreateService">
+        <div>
+            <label asp-for="Name" class="control-label">Name:</label>
+            <input asp-for="Name" type="text" id="Name" name="Name" required/>
+        </div>
+        <div>
+            <label asp-for="Price" class="control-label">Price:</label>
+            <input asp-for="Price" type="number" id="Price" name="Price" required/>
+        </div>
+        <div>
+            <label asp-for="Area" class="control-label">Area:</label>
+            <input type="text" id="Area" name="Area" required/>
+        </div>
+        <div>
+            <label asp-for="ExtraInfo" class="control-label">Extra info:</label>
+            <input type="text" id="ExtraInfo" name="ExtraInfo" required/>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary">Add Service</button>
+        </div>
+    </form>
+}

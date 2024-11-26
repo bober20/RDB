@@ -1,0 +1,78 @@
+@using Entities
+@model EmployeeViewModel
+
+@{
+    var positions = ViewData["positions"] as List<EmployeePosition>;
+    var users = ViewData["users"] as List<User>;
+}
+
+<form method="post" enctype="multipart/form-data" asp-action="CreateEmployeeHandler">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="form-group">
+        <label asp-for="FirstName" class="control-label">First Name</label>
+        <input asp-for="FirstName" class="form-control" name="FirstName"/>
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="LastName" class="control-label">Last Name</label>
+        <input asp-for="LastName" class="form-control" name="LastName"/>
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Email" class="control-label">Email</label>
+        <input asp-for="Email" class="form-control" name="Email"/>
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="Password" class="control-label">Password</label>
+        <input asp-for="Password" class="form-control" name="Password"/>
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="IsAdmin" class="control-label">Is Admin</label>
+        <input asp-for="IsAdmin" class="form-control" type="checkbox" name="IsAdmin"/>
+        <span asp-validation-for="IsAdmin" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <label asp-for="PositionId" class="control-label">Position</label>
+        <select asp-for="PositionId" class="form-control" asp-items="@(new SelectList(positions as List<EmployeePosition>, "Id", "PositionName"))"></select>
+        <span asp-validation-for="PositionId" class="text-danger"></span>
+    </div>
+    <div class="form-group">
+        <input type="submit" value="Add Employee" class="btn btn-primary"/>
+    </div>
+</form>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>User ID</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Email</th>
+        <th>Is Staff</th>
+        <th>Is Admin</th>
+        <th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var user in users)
+    {
+        <tr>
+            <td>@user.UserId</td>
+            <td>@user.FirstName</td>
+            <td>@user.LastName</td>
+            <td>@user.Email</td>
+            <td>
+                <input type="checkbox" checked="@user.IsStaff" data-user-id="@user.UserId" data-role="staff" class="admin-checkbox" name="staff_checkbox">
+            </td>
+            <td>
+                <input type="checkbox" checked="@user.IsAdmin" data-user-id="@user.UserId" data-role="admin" class="admin-checkbox" name="admin_checkbox">
+            </td>
+            <td>
+                <a asp-controller="Admin" asp-action="DeleteUser" asp-route-userId="@user.UserId">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

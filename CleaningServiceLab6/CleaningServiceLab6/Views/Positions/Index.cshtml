@@ -1,0 +1,69 @@
+@using Entities
+@model Entities.EmployeePosition
+
+@{
+    var positions = ViewData["positions"] as List<EmployeePosition>;
+    var vacancies = ViewData["vacancies"] as List<Vacancy>;
+}
+
+<h2>Employee Positions</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Position ID</th>
+            <th>Position Name</th>
+            <th>Salary</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var position in positions)
+        {
+            <tr>
+                <td>@position.Id</td>
+                <td>@position.PositionName</td>
+                <td>@position.Salary</td>
+                <td><a asp-controller="Positions" asp-action="DeletePosition" asp-route-position="@position.Id">Delete</a></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h2>Vacancies</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Vacancy ID</th>
+            <th>Position ID</th>
+            <th>Vacancy Number</th>
+            <th>Vacancy Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var vacancy in vacancies)
+        {
+            <tr>
+                <td>@vacancy.Id</td>
+                <td>@vacancy.PositionId</td>
+                <td><input type="number" value="@vacancy.VacancyNumber" data-vacancy-id="@vacancy.Id" class="vacancy-number" name="vacancy_input"></td>
+                <td><input type="text" value="@vacancy.VacancyDescription" data-vacancy-id="@vacancy.Id" class="vacancy-description" name="vacancy_input"></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h2>Add Employee Position</h2>
+<form method="post" asp-action="AddPosition">
+    <div>
+        <label for="PositionName">Position Name:</label>
+        <input type="text" id="PositionName" name="PositionName" required />
+    </div>
+    <div>
+        <label for="Salary">Salary:</label>
+        <input type="number" id="Salary" name="Salary" required />
+    </div>
+    <div>
+        <button type="submit">Add Position</button>
+    </div>
+</form>
+

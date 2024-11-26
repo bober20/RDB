@@ -1,0 +1,48 @@
+@using Entities
+@model Entities.Answer
+
+@{
+    List<Question> questions = (List<Question>)ViewData["questions"];
+}
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Question ID</th>
+        <th>Answer ID</th>
+        <th>Content</th>
+        <th>Creation Date</th>
+        <th>Action</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var question in questions)
+    {
+        <tr>
+            <td>@question.Id</td>
+            <td>@question.AnswerId</td>
+            <td>@question.Content</td>
+            <td>@question.CreationDate.ToShortDateString()</td>
+            @if (question.AnswerId == null)
+            {
+                <td>
+                    <h2>Submit an Answer</h2>
+                    <form method="post" asp-action="CreateAnswer">
+                        <div class="form-group">
+                            <label asp-for="Content" class="control-label">Content</label>
+                            <textarea asp-for="Content" class="form-control"></textarea>
+                            <span asp-validation-for="Content" class="text-danger"></span>
+                        </div>
+                        <div class="form-group" style="display: none">
+                            <input type="hidden" asp-for="QuestionId" value="@question.Id"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" value="Submit Answer" class="btn btn-primary"/>
+                        </div>
+                    </form>
+                </td>
+            }
+        </tr>
+    }
+    </tbody>
+</table>

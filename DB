@@ -526,47 +526,75 @@ EXECUTE FUNCTION log_new_client();
 
 
 
---for employees
-CREATE OR REPLACE FUNCTION log_new_employee()
+
+CREATE OR REPLACE FUNCTION decrease_vacancy_on_hire()
 RETURNS TRIGGER AS $$
-BEGIN 
-    INSERT INTO logs(action_id, user_id, log_date)
-    values (
-        (SELECT action_id FROM actions WHERE action_name = 'New employee registered'),
-        (NEW.user_id),
-        CURRENT_DATE
-    );
-   RETURN NEW;
+BEGIN
+    IF (SELECT vacancy_number FROM vacancies WHERE position_id = NEW.position_id) > 1 THEN
+        UPDATE vacancies
+        SET vacancy_number = vacancy_number - 1
+        WHERE position_id = NEW.position_id;
+    ELSE
+        DELETE FROM vacancies WHERE position_id = NEW.position_id;
+    END IF;
+
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-
-CREATE TRIGGER trigger_log_new_employee
+CREATE TRIGGER reduce_vacancy_trigger
 AFTER INSERT ON employees
 FOR EACH ROW
-EXECUTE FUNCTION log_new_employee();
+EXECUTE FUNCTION decrease_vacancy_on_hire();
 
 
 
---for employees positions
+
+
+
+
+
 CREATE OR REPLACE FUNCTION log_new_employee_position()
 RETURNS TRIGGER AS $$
 BEGIN 
     INSERT INTO logs(action_id, user_id, log_date)
-    values (
-        (5),
-        (NEW.user_id),
+    VALUES (
+        5,
+        NEW.user_id,
         CURRENT_DATE
     );
-   RETURN NEW;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-
-CREATE TRIGGER log_new_employee_position
+CREATE TRIGGER log_new_employee_position_trigger
 AFTER UPDATE OF position_id ON employees 
 FOR EACH ROW
 WHEN (OLD.position_id IS DISTINCT FROM NEW.position_id)
+EXECUTE FUNCTION log_new_employee_position();
+
+
+
+
+
+
+
+CREATE OR REPLACE FUNCTION log_new_employee()
+RETURNS TRIGGER AS $$
+BEGIN 
+    INSERT INTO logs(action_id, user_id, log_date)
+    VALUES (
+        (SELECT action_id FROM actions WHERE action_name = 'New employee registered'),
+        NEW.user_id,
+        CURRENT_DATE
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_log_new_employee
+AFTER INSERT ON employees
+FOR EACH ROW
 EXECUTE FUNCTION log_new_employee();
 
 
@@ -782,25 +810,6 @@ SELECT get_order_sum(1);
 
 
 
-CREATE OR REPLACE FUNCTION decrease_vacancy_on_hire()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE vacancies
-    SET vacancy_number = vacancy_number - 1
-    WHERE position_id = NEW.position_id AND vacancy_number > 0;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER reduce_vacancy_trigger
-AFTER INSERT ON employees
-FOR EACH ROW
-EXECUTE FUNCTION decrease_vacancy_on_hire();
-
-
-
-
 
 CREATE OR REPLACE FUNCTION add_answer_without_info()
 RETURNS TRIGGER AS $$
@@ -826,23 +835,108 @@ FOR EACH ROW
 EXECUTE FUNCTION add_answer_without_info();
 
 
-CREATE OR REPLACE FUNCTION update_vacancy_on_hire()
+CREATE OR REPLACE FUNCTION update_vacancy_on_position_creation()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO vacancies (position_id, vacancy_number, vacancy_description)
-    VALUES 
-    (NEW.position_id, 1, 'Looking for experienced employees');
+    IF NOT EXISTS (
+        SELECT 1 FROM employees WHERE position_id = NEW.position_id
+    ) THEN
+        INSERT INTO vacancies (position_id, vacancy_number, vacancy_description)
+        VALUES (NEW.position_id, 1, 'Looking for experienced employees');
+    END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- DROP TRIGGER reduce_vacancy_trigger on employees;
-
+-- Создаем триггер
 CREATE TRIGGER employees_vacancy_trigger
-AFTER INSERT ON employee_positions
+AFTER INSERT ON employee_positions -- Таблица, к которой привязывается триггер
 FOR EACH ROW
-EXECUTE FUNCTION decrease_vacancy_on_hire();
+EXECUTE FUNCTION update_vacancy_on_hire();
+
+
+
+CREATE OR REPLACE FUNCTION update_bonus_id_function()
+RETURNS TRIGGER AS $$
+BEGIN
+
+UPDATE orders
+SET bonus_id = null
+WHERE (SELECT COUNT(*) 
+FROM services_orders 
+WHERE services_orders.order_id = orders.order_id) < 1;
+
+    UPDATE orders
+SET bonus_id = 1
+WHERE (SELECT COUNT(*) 
+FROM services_orders 
+WHERE services_orders.order_id = orders.order_id) = 2;
+
+UPDATE orders
+SET bonus_id = 2
+WHERE (SELECT COUNT(*) 
+FROM services_orders 
+WHERE services_orders.order_id = orders.order_id) >= 3;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER update_bonus_id_trigger_insert
+AFTER INSERT ON services_orders
+FOR EACH ROW
+EXECUTE FUNCTION update_bonus_id_function();
+
+CREATE TRIGGER update_bonus_id_trigger_delete
+AFTER DELETE ON services_orders
+FOR EACH ROW
+EXECUTE FUNCTION update_bonus_id_function();
+
+
+
+
+CREATE OR REPLACE FUNCTION get_order_sum(
+    required_order_id INTEGER
+)
+RETURNS NUMERIC AS $$
+DECLARE
+    total_sum NUMERIC;
+    discount_percentage NUMERIC;
+BEGIN
+    -- Get the discount percentage for the order
+    SELECT COALESCE(bonuses.discount_percentage, 0)
+    INTO discount_percentage
+    FROM orders
+    LEFT JOIN bonuses ON orders.bonus_id = bonuses.bonus_id
+    WHERE orders.order_id = required_order_id;
+
+    -- Calculate the total sum with the discount applied
+    SELECT SUM(price) * (1 - discount_percentage / 100)
+    INTO total_sum
+    FROM services
+    WHERE services.service_id = ANY (
+        SELECT service_id
+        FROM services_orders
+        WHERE services_orders.order_id = required_order_id
+    );
+
+    RETURN total_sum;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- что поменялось
+-- добавился триггер на автоматическое добавление бонуса в заказе, 
+-- вакансий, если добавляется позиция для сотрудника
+-- имя для сервиса для удобства
+-- изменена функция для подсчета суммы заказа
+-- изменена функция для уменьшения количества вакансий при найме сотрудника
+
+
+
+
 
 
 -- create or replace function name()

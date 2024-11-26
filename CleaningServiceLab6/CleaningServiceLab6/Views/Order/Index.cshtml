@@ -1,0 +1,110 @@
+@using Entities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model Entities.Order
+
+@{
+    var orders = ViewData["orders"] as List<Order>;
+    var services = ViewData["services"] as List<Service>;
+    var employees = ViewData["employees"] as List<Employee>;
+    var bonuses = ViewData["bonuses"] as List<Bonus>;
+    var clientId = (int)ViewData["clientId"];
+}
+
+@{
+    var isStaffClaim = User.FindFirst("is_staff")?.Value;
+    bool isStaff = !string.IsNullOrEmpty(isStaffClaim) && bool.Parse(isStaffClaim);
+    var isAdminClaim = User.FindFirst("is_admin")?.Value;
+    bool isAdmin = !string.IsNullOrEmpty(isAdminClaim) && bool.Parse(isAdminClaim);
+}
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Client ID</th>
+        <th>Employee Id</th>
+        <th>Client Address</th>
+        <th>Order Date</th>
+        <th>Order sum</th>
+        <th>Discount percentage</th>
+        <th>Services</th>
+        <th>Action</th>
+        <th>Add service</th>
+    </tr>
+    </thead>
+    <tbody>
+    @if (orders is not null)
+    {
+        @foreach (var order in orders)
+        {
+            <tr>
+                <td>@order.ClientId</td>
+                <td>@employees?.Find(e => e.Id == order.EmployeeId)?.LastName</td>
+                <td>@order.ClientAddress</td>
+                <td>@order.OrderDate</td>
+                <td>@order.OrderSum</td>
+                <td>@bonuses?.Find(b => b.Id == order.BonusId)?.DiscountPercentage</td>
+                <td>
+                    <ul>
+                        @foreach (var service in order.Services)
+                        {
+                            <li>
+                                <p>
+                                    @service.Name
+                                    <a asp-controller="Order" asp-action="RemoveService" asp-route-orderId="@order.Id" asp-route-serviceId="@service.Id">Delete</a>
+                                </p>
+                            </li>
+                        }
+                    </ul>
+                </td>
+                <td>
+                    <a asp-controller="Order" asp-action="DeleteOrder" asp-route-order="@order.Id">Delete</a>
+                </td>
+                <td>
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Services
+                        </button>
+                        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                            @foreach (var service in services)
+                            {
+                                <a class="dropdown-item" asp-controller="Order" asp-action="AddService" asp-route-orderId="@order.Id" asp-route-serviceId="@service.Id">@service.Name</a>
+                            }
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        }
+    }
+
+    </tbody>
+</table>
+
+@if (!isStaff)
+{
+    <form method="post" enctype="multipart/form-data" asp-action="CreateHandler">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <div class="form-group" style="display: none">
+            <label asp-for="ClientId" class="control-label">Client ID</label>
+            <input asp-for="ClientId" value="@clientId" class="form-control"/>
+            <span asp-validation-for="ClientId" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="EmployeeId" class="control-label">Employee</label>
+            <select asp-for="EmployeeId" class="form-control" asp-items="@(new SelectList(employees, "Id", "LastName"))"></select>
+            <span asp-validation-for="EmployeeId" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="ClientAddress" class="control-label">Client Address</label>
+            <input asp-for="ClientAddress" class="form-control"/>
+            <span asp-validation-for="ClientAddress" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <label asp-for="OrderDate" class="control-label">Order Date</label>
+            <input asp-for="OrderDate" class="form-control" type="datetime-local"/>
+            <span asp-validation-for="OrderDate" class="text-danger"></span>
+        </div>
+        <div class="form-group">
+            <input type="submit" value="Add Order" class="btn btn-primary"/>
+        </div>
+    </form>
+}

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CleaningServiceLab6", "CleaningServiceLab6\CleaningServiceLab6.csproj", "{018325D1-98B8-4B38-B2E7-ED696B53375A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Entities", "Entities\Entities.csproj", "{553DDBC1-5ACB-466F-86C9-6CEA7479338C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{018325D1-98B8-4B38-B2E7-ED696B53375A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{018325D1-98B8-4B38-B2E7-ED696B53375A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{018325D1-98B8-4B38-B2E7-ED696B53375A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{018325D1-98B8-4B38-B2E7-ED696B53375A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{553DDBC1-5ACB-466F-86C9-6CEA7479338C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{553DDBC1-5ACB-466F-86C9-6CEA7479338C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{553DDBC1-5ACB-466F-86C9-6CEA7479338C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{553DDBC1-5ACB-466F-86C9-6CEA7479338C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
