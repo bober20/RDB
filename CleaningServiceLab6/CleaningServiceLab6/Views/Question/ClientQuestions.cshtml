@@ -3,6 +3,7 @@
 
 @{
     List<Question> questions = (List<Question>)ViewData["questions"];
+    List<Answer> answers = (List<Answer>)ViewData["answers"];
 }
 
 <h2>Submit a Question</h2>
@@ -21,8 +22,8 @@
     <thead>
     <tr>
         <th>Question ID</th>
-        <th>Answer ID</th>
-        <th>Content</th>
+        <th>Question</th>
+        <th>Answer</th>
         <th>Creation Date</th>
     </tr>
     </thead>
@@ -31,8 +32,8 @@
     {
         <tr>
             <td>@question.Id</td>
-            <td>@question.AnswerId</td>
             <td>@question.Content</td>
+            <td>@answers?.FirstOrDefault(a => a.Id == question.AnswerId)?.Content</td>
             <td>@question.CreationDate.ToShortDateString()</td>
         </tr>
     }

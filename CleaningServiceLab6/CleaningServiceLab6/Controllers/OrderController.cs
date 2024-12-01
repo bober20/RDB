@@ -7,11 +7,6 @@ namespace CleaningServiceLab6.Controllers;
 
 public class OrderController(DbService dbService) : Controller
 {
-    public IActionResult Create()
-    {
-        return View();
-    }
-
     public async Task<IActionResult> CreateHandler(Order order)
     {
         await dbService.CreateOrder(order);

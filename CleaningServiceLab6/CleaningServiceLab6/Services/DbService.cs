@@ -704,5 +704,36 @@ namespace CleaningServiceLab6.Services
                 }
             }
         }
+
+        public async Task<List<Answer>> GetAllAnswers()
+        {
+            var answers = new List<Answer>();
+            
+            await using (var conn = new NpgsqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                await using (var cmd = new NpgsqlCommand(
+                                 $"select * from answers; ",
+                                 conn))
+                {
+                    await using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var answer = new Answer()
+                            {
+                                Id = reader["answer_id"] != DBNull.Value ? (int)reader["answer_id"] : 0,
+                                Content = (string)reader["content"]
+                            };
+
+                            answers.Add(answer);
+                        }
+                    }
+                }
+
+                return answers;
+            }
+        }
     }
 }

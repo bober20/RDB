@@ -11,8 +11,10 @@ public class QuestionController(DbService dbService) : Controller
     public async Task<IActionResult> EmployeeQuestions()
     {
         var questions = await dbService.GetAllQuestions();
+        var answers = await dbService.GetAllAnswers();
         
         ViewData["questions"] = questions;
+        ViewData["answers"] = answers;
         
         return View(new Answer());
     }
@@ -20,8 +22,10 @@ public class QuestionController(DbService dbService) : Controller
     public async Task<IActionResult> ClientQuestions()
     {
         var questions = await dbService.GetAllQuestions();
+        var answers = await dbService.GetAllAnswers();
         
         ViewData["questions"] = questions;
+        ViewData["answers"] = answers;
         
         return View(new Question());
     }
@@ -36,6 +40,10 @@ public class QuestionController(DbService dbService) : Controller
     public async Task<IActionResult> CreateAnswer(Answer answer)
     {
         var userId = Convert.ToInt32(HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        if (userId == 0)
+        {
+            return RedirectToAction("EmployeeQuestions", "Question");
+        }
         answer.EmployeeId = await dbService.GetEmployeeId(userId);
         await dbService.AddAnswer(answer);
         

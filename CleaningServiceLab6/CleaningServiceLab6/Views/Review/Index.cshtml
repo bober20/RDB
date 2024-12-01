@@ -10,7 +10,7 @@
     var isAdminClaim = User.FindFirst("is_admin")?.Value;
     bool isAdmin = !string.IsNullOrEmpty(isAdminClaim) && bool.Parse(isAdminClaim);
 }
-@if (User.Identity.IsAuthenticated && !isStaff)
+@if (User.Identity.IsAuthenticated && !(isStaff || isAdmin))
 {
     <form method="post" asp-action="CreateReview">
         <div class="form-group">

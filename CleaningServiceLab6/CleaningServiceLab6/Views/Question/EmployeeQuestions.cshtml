@@ -3,13 +3,14 @@
 
 @{
     List<Question> questions = (List<Question>)ViewData["questions"];
+    List<Answer> answers = (List<Answer>)ViewData["answers"];
 }
 
 <table class="table">
     <thead>
     <tr>
         <th>Question ID</th>
-        <th>Answer ID</th>
+        <th>Answer</th>
         <th>Content</th>
         <th>Creation Date</th>
         <th>Action</th>
@@ -20,7 +21,7 @@
     {
         <tr>
             <td>@question.Id</td>
-            <td>@question.AnswerId</td>
+            <td>@answers?.FirstOrDefault(a => a.Id == question.AnswerId)?.Content</td>
             <td>@question.Content</td>
             <td>@question.CreationDate.ToShortDateString()</td>
             @if (question.AnswerId == null)
